@@ -1,0 +1,17 @@
+# Convenience file for local Docker testing. The Unraid template runs the
+# same image with a plain `docker run` and a single /config volume -- this
+# just wraps that in compose for `docker compose up` during development.
+services:
+  sophub:
+    build: .
+    image: allornothing/sop-hub:latest
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "8080:8080"
+    volumes:
+      - sophub_config:/config
+
+volumes:
+  sophub_config:

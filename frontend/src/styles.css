@@ -1,0 +1,48 @@
+:root {
+  color-scheme: light dark;
+  --bg: #0f1115;
+  --panel: #171a21;
+  --border: #262b36;
+  --text: #e8eaed;
+  --muted: #9aa3b2;
+  --accent: #5b8def;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+}
+
+a { color: var(--accent); }
+
+.app-shell { display: flex; min-height: 100vh; }
+.sidebar { width: 220px; background: var(--panel); border-right: 1px solid var(--border); padding: 20px; }
+.sidebar h1 { font-size: 18px; margin: 0 0 24px; }
+.sidebar nav a { display: block; padding: 8px 0; color: var(--muted); text-decoration: none; }
+.sidebar nav a:hover { color: var(--text); }
+.main { flex: 1; padding: 32px; max-width: 960px; }
+
+.card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 16px; }
+.btn { background: var(--accent); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; }
+.btn.secondary { background: transparent; border: 1px solid var(--border); color: var(--text); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+input, textarea, select {
+  width: 100%; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border);
+  background: #0c0e13; color: var(--text); font-size: 14px; margin-bottom: 12px;
+}
+label { font-size: 13px; color: var(--muted); display: block; margin-bottom: 4px; }
+
+.guide-list-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border); }
+.step-card { display: flex; gap: 16px; }
+.step-card img { width: 220px; border-radius: 8px; border: 1px solid var(--border); }
+.step-card .step-body { flex: 1; }
+.badge { font-size: 11px; padding: 2px 8px; border-radius: 999px; background: #223; color: var(--muted); }
+.badge.published { background: #16351f; color: #6fdc8c; }
+.toolbar { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+.chat-box { border: 1px solid var(--border); border-radius: 8px; height: 260px; overflow-y: auto; padding: 12px; background: #0c0e13; margin-bottom: 12px; }
+.chat-msg { margin-bottom: 8px; }
+.chat-msg.assistant { color: var(--accent); }

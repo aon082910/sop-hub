@@ -1,0 +1,49 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>SOP-Hub Capture</title>
+    <style>
+      body { width: 300px; font-family: system-ui, sans-serif; padding: 12px; background: #171a21; color: #e8eaed; }
+      h1 { font-size: 15px; margin: 0 0 10px; }
+      label { font-size: 11px; color: #9aa3b2; display: block; margin-top: 8px; }
+      input, select { width: 100%; padding: 6px; margin-top: 2px; border-radius: 5px; border: 1px solid #262b36; background: #0c0e13; color: #e8eaed; }
+      button { width: 100%; margin-top: 10px; padding: 8px; border: none; border-radius: 6px; background: #5b8def; color: white; cursor: pointer; font-size: 13px; }
+      button.secondary { background: transparent; border: 1px solid #262b36; color: #e8eaed; }
+      button:disabled { opacity: 0.5; cursor: not-allowed; }
+      #status { font-size: 12px; color: #9aa3b2; margin-top: 8px; }
+      .row { display: flex; gap: 6px; }
+      .row button { flex: 1; }
+    </style>
+  </head>
+  <body>
+    <h1>SOP-Hub Capture</h1>
+
+    <div id="loginView">
+      <label>SOP-Hub server URL</label>
+      <input id="serverUrl" placeholder="http://localhost:4000" />
+      <label>Email</label>
+      <input id="email" type="email" />
+      <label>Password</label>
+      <input id="password" type="password" />
+      <button id="loginBtn">Log in</button>
+      <div id="loginStatus" style="color:#e35d5d;font-size:12px;"></div>
+    </div>
+
+    <div id="recordView" style="display:none">
+      <label>Guide title</label>
+      <input id="guideTitle" placeholder="Untitled Guide" />
+      <div class="row">
+        <button id="toggleBtn">Start recording</button>
+      </div>
+      <div id="status">0 steps captured</div>
+      <div class="row">
+        <button id="uploadBtn" class="secondary">Upload to SOP-Hub</button>
+        <button id="clearBtn" class="secondary">Clear</button>
+      </div>
+      <button id="logoutBtn" class="secondary">Log out</button>
+    </div>
+
+    <script src="popup.js"></script>
+  </body>
+</html>
