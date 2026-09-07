@@ -5,6 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { authRouter } from "./routes/auth.js";
 import { workspacesRouter } from "./routes/workspaces.js";
+import { foldersRouter } from "./routes/folders.js";
 import { guidesRouter, publicGuidesRouter } from "./routes/guides.js";
 import { stepsRouter } from "./routes/steps.js";
 import { aiRouter } from "./routes/ai.js";
@@ -21,6 +22,7 @@ app.get("/health", (_req, res) => res.json({ ok: true }));
 
 app.use("/auth", authRouter);
 app.use("/workspaces", workspacesRouter);
+app.use("/folders", foldersRouter);
 app.use("/guides", guidesRouter);
 app.use("/public/guides", publicGuidesRouter);
 app.use("/steps", stepsRouter);

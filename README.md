@@ -24,6 +24,8 @@ hardware (e.g. Unraid) via a single Docker container.
 - **Publish & share** — one click publishes a guide to a public read-only link.
 - **Export** — PDF, HTML, and Markdown, each self-contained with embedded step images.
 - **Multi-tenant** — users, workspaces, and workspace membership.
+- **Folders** — group guides within a workspace; a guide belongs to at most one folder
+  (or none, shown as "Unfiled").
 
 ## Quick start
 
@@ -121,14 +123,15 @@ VITE_API_BASE_URL=http://localhost:4000 npm run dev   # http://localhost:5173
 
 ## Data model
 
-See `backend/src/db/schema.sql` — `users`, `workspaces`, `workspace_members`, `guides`,
-`steps`, `guide_chat_messages`.
+See `backend/src/db/schema.sql` — `users`, `workspaces`, `workspace_members`, `folders`,
+`guides`, `steps`, `guide_chat_messages`.
 
 ## Known limitations / next steps
 
 - Step drag-and-drop reordering is up/down buttons, not drag handles yet.
 - Redaction is a black box only (no blur), applied destructively to the stored screenshot
   with no undo once applied.
+- Folders are a single flat level per workspace — no nested subfolders.
 - The extension does not yet auto-suggest step titles from the DOM element clicked —
   it relies on the AI "Describe screenshot" action in the editor instead.
 - No role-based permissions beyond workspace membership (all members can edit all guides).

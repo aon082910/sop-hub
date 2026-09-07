@@ -54,9 +54,22 @@ guidesRouter.get("/", async (req: AuthedRequest, res) => {
   if (!(await assertMember(req.userId!, workspaceId))) {
     return res.status(403).json({ error: "Not a member of this workspace" });
   }
+
+  // folderId=<uuid> filters to that folder; folderId=unfiled filters to guides
+  // with no folder; omitted returns every guide in the workspace.
+  const folderId = req.query.folderId as string | undefined;
+  const params: unknown[] = [workspaceId];
+  let where = "workspace_id = $1";
+  if (folderId === "unfiled") {
+    where += " AND folder_id IS NULL";
+  } else if (folderId) {
+    params.push(folderId);
+    where += ` AND folder_id = $${params.length}`;
+  }
+
   const result = await pool.query(
-    "SELECT * FROM guides WHERE workspace_id = $1 ORDER BY updated_at DESC",
-    [workspaceId]
+    `SELECT * FROM guides WHERE ${where} ORDER BY updated_at DESC`,
+    params
   );
   res.json({ guides: result.rows });
 });
@@ -73,7 +86,10 @@ const updateGuideSchema = z.object({
   description: z.string().optional(),
   tags: z.array(z.string()).optional(),
   status: z.enum(["draft", "published"]).optional(),
+  folderId: z.string().uuid().nullable().optional(),
 });
+
+const COLUMN_BY_FIELD: Record<string, string> = { folderId: "folder_id" };
 
 guidesRouter.patch("/:id", async (req: AuthedRequest, res) => {
   const guide = await assertGuideAccess(req.userId!, req.params.id);
@@ -81,12 +97,20 @@ guidesRouter.patch("/:id", async (req: AuthedRequest, res) => {
   const parsed = updateGuideSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
 
+  if (parsed.data.folderId) {
+    const folderResult = await pool.query(
+      "SELECT 1 FROM folders WHERE id = $1 AND workspace_id = $2",
+      [parsed.data.folderId, guide.workspace_id]
+    );
+    if (!folderResult.rowCount) return res.status(404).json({ error: "Folder not found" });
+  }
+
   const fields = parsed.data;
   const setClauses: string[] = [];
   const values: unknown[] = [];
   let i = 1;
   for (const [key, value] of Object.entries(fields)) {
-    setClauses.push(`${key === "title" ? "title" : key} = $${i++}`);
+    setClauses.push(`${COLUMN_BY_FIELD[key] ?? key} = $${i++}`);
     values.push(value);
   }
   if (fields.status === "published" && !guide.share_slug) {

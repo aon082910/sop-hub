@@ -37,6 +37,8 @@ input, textarea, select {
 label { font-size: 13px; color: var(--muted); display: block; margin-bottom: 4px; }
 
 .guide-list-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border); }
+.guide-list-item select { width: auto; margin-bottom: 0; }
+.guide-list-item.active { color: var(--accent); font-weight: 600; }
 .step-card { display: flex; gap: 16px; }
 .step-card img { width: 220px; border-radius: 8px; border: 1px solid var(--border); }
 .step-card .step-body { flex: 1; }
