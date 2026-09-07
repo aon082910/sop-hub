@@ -14,7 +14,8 @@ hardware (e.g. Unraid) via a single Docker container.
   - Browser extension (`extension/`): click through the workflow in Chrome and SOP-Hub
     auto-captures a screenshot + click position for every click, then uploads the whole
     walkthrough as a new guide in one click.
-- **Editor** — reorder, retitle, and rewrite steps.
+- **Editor** — reorder, retitle, and rewrite steps; redact sensitive parts of a
+  screenshot by drawing boxes over them before publishing.
 - **AI assistance**, local or cloud, picked per-request:
   - Describe a step from its screenshot (vision).
   - Auto-generate a guide title + summary from its steps.
@@ -126,8 +127,8 @@ See `backend/src/db/schema.sql` — `users`, `workspaces`, `workspace_members`, 
 ## Known limitations / next steps
 
 - Step drag-and-drop reordering is up/down buttons, not drag handles yet.
-- No image-blur/redaction tool in the editor yet (the schema has a `steps.redacted` flag
-  ready for it).
+- Redaction is a black box only (no blur), applied destructively to the stored screenshot
+  with no undo once applied.
 - The extension does not yet auto-suggest step titles from the DOM element clicked —
   it relies on the AI "Describe screenshot" action in the editor instead.
 - No role-based permissions beyond workspace membership (all members can edit all guides).
