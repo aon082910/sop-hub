@@ -51,6 +51,8 @@ CREATE TABLE IF NOT EXISTS steps (
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+ALTER TABLE steps ADD COLUMN IF NOT EXISTS redaction_rects JSONB NOT NULL DEFAULT '[]';
+
 CREATE INDEX IF NOT EXISTS idx_steps_guide_position ON steps(guide_id, position);
 
 CREATE TABLE IF NOT EXISTS guide_chat_messages (

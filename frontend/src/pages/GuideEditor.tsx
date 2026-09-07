@@ -16,6 +16,14 @@ interface Step {
   title: string;
   instruction: string;
   image_path: string | null;
+  redacted: boolean;
+}
+
+interface Rect {
+  xPct: number;
+  yPct: number;
+  wPct: number;
+  hPct: number;
 }
 
 export default function GuideEditor() {
@@ -24,6 +32,11 @@ export default function GuideEditor() {
   const [steps, setSteps] = useState<Step[]>([]);
   const [busyStepId, setBusyStepId] = useState<string | null>(null);
   const [busyGuide, setBusyGuide] = useState(false);
+  const [redactingId, setRedactingId] = useState<string | null>(null);
+  const [pendingRects, setPendingRects] = useState<Rect[]>([]);
+  const [drawStart, setDrawStart] = useState<{ x: number; y: number } | null>(null);
+  const [drawRect, setDrawRect] = useState<Rect | null>(null);
+  const [imgVersion, setImgVersion] = useState<Record<string, number>>({});
   const fileInput = useRef<HTMLInputElement>(null);
   const provider = localStorage.getItem("sophub_ai_provider") || undefined;
 
@@ -94,6 +107,65 @@ export default function GuideEditor() {
     } finally {
       setBusyStepId(null);
     }
+  }
+
+  function startRedact(stepId: string) {
+    setRedactingId(stepId);
+    setPendingRects([]);
+    setDrawStart(null);
+    setDrawRect(null);
+  }
+
+  function cancelRedact() {
+    setRedactingId(null);
+    setPendingRects([]);
+    setDrawStart(null);
+    setDrawRect(null);
+  }
+
+  function rectFromPoints(container: HTMLElement, x1: number, y1: number, x2: number, y2: number): Rect {
+    const box = container.getBoundingClientRect();
+    const toPct = (v: number, total: number) => Math.min(100, Math.max(0, (v / total) * 100));
+    const left = Math.min(x1, x2) - box.left;
+    const top = Math.min(y1, y2) - box.top;
+    const width = Math.abs(x2 - x1);
+    const height = Math.abs(y2 - y1);
+    return {
+      xPct: toPct(left, box.width),
+      yPct: toPct(top, box.height),
+      wPct: toPct(width, box.width),
+      hPct: toPct(height, box.height),
+    };
+  }
+
+  function onRedactMouseDown(e: React.MouseEvent<HTMLDivElement>) {
+    setDrawStart({ x: e.clientX, y: e.clientY });
+    setDrawRect(rectFromPoints(e.currentTarget, e.clientX, e.clientY, e.clientX, e.clientY));
+  }
+
+  function onRedactMouseMove(e: React.MouseEvent<HTMLDivElement>) {
+    if (!drawStart) return;
+    setDrawRect(rectFromPoints(e.currentTarget, drawStart.x, drawStart.y, e.clientX, e.clientY));
+  }
+
+  function onRedactMouseUp() {
+    if (drawRect && drawRect.wPct > 1 && drawRect.hPct > 1) {
+      setPendingRects((r) => [...r, drawRect]);
+    }
+    setDrawStart(null);
+    setDrawRect(null);
+  }
+
+  function undoLastRect() {
+    setPendingRects((r) => r.slice(0, -1));
+  }
+
+  async function applyRedaction(stepId: string) {
+    if (!pendingRects.length) return cancelRedact();
+    const res = await api.post<{ step: Step }>(`/steps/${stepId}/redact`, { rects: pendingRects });
+    setSteps((s) => s.map((st) => (st.id === stepId ? res.step : st)));
+    setImgVersion((v) => ({ ...v, [stepId]: Date.now() }));
+    cancelRedact();
   }
 
   async function aiSummary() {
@@ -185,10 +257,44 @@ export default function GuideEditor() {
 
       {steps.map((step, i) => (
         <div className="card step-card" key={step.id}>
-          {step.image_path && <img src={`${api.base}/uploads/${step.image_path}`} alt="" />}
+          {step.image_path && redactingId === step.id ? (
+            <div
+              style={{ position: "relative", cursor: "crosshair", userSelect: "none" }}
+              onMouseDown={onRedactMouseDown}
+              onMouseMove={onRedactMouseMove}
+              onMouseUp={onRedactMouseUp}
+            >
+              <img
+                src={`${api.base}/uploads/${step.image_path}?v=${imgVersion[step.id] ?? 0}`}
+                alt=""
+                draggable={false}
+                style={{ display: "block" }}
+              />
+              {[...pendingRects, ...(drawRect ? [drawRect] : [])].map((r, idx) => (
+                <div
+                  key={idx}
+                  style={{
+                    position: "absolute",
+                    left: `${r.xPct}%`,
+                    top: `${r.yPct}%`,
+                    width: `${r.wPct}%`,
+                    height: `${r.hPct}%`,
+                    background: "rgba(0,0,0,0.7)",
+                    border: "1px solid red",
+                    pointerEvents: "none",
+                  }}
+                />
+              ))}
+            </div>
+          ) : (
+            step.image_path && (
+              <img src={`${api.base}/uploads/${step.image_path}?v=${imgVersion[step.id] ?? 0}`} alt="" />
+            )
+          )}
           <div className="step-body">
             <div className="toolbar" style={{ marginBottom: 8 }}>
               <strong>Step {i + 1}</strong>
+              {step.redacted && <span className="badge">redacted</span>}
               <button className="btn secondary" onClick={() => move(step.id, -1)}>
                 ↑
               </button>
@@ -199,6 +305,24 @@ export default function GuideEditor() {
                 <button className="btn secondary" disabled={busyStepId === step.id} onClick={() => aiCaption(step.id)}>
                   {busyStepId === step.id ? "Thinking..." : "✨ AI: Describe screenshot"}
                 </button>
+              )}
+              {step.image_path && redactingId !== step.id && (
+                <button className="btn secondary" onClick={() => startRedact(step.id)}>
+                  Redact
+                </button>
+              )}
+              {redactingId === step.id && (
+                <>
+                  <button className="btn secondary" onClick={undoLastRect} disabled={!pendingRects.length}>
+                    Undo last box
+                  </button>
+                  <button className="btn" onClick={() => applyRedaction(step.id)} disabled={!pendingRects.length}>
+                    Apply redaction
+                  </button>
+                  <button className="btn secondary" onClick={cancelRedact}>
+                    Cancel
+                  </button>
+                </>
               )}
               <button
                 className="btn secondary"

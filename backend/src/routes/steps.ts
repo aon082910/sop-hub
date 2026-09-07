@@ -1,8 +1,11 @@
 import { Router } from "express";
 import { z } from "zod";
+import path from "node:path";
+import { rename } from "node:fs/promises";
+import sharp from "sharp";
 import { pool } from "../db/pool.js";
 import { requireAuth, type AuthedRequest } from "../middleware/auth.js";
-import { upload } from "../services/storage.js";
+import { upload, uploadDir } from "../services/storage.js";
 import { assertGuideAccess } from "./guides.js";
 
 export const stepsRouter = Router();
@@ -69,6 +72,55 @@ stepsRouter.patch("/:id", async (req: AuthedRequest, res) => {
   const result = await pool.query(
     `UPDATE steps SET ${setClauses.join(", ")} WHERE id = $${i} RETURNING *`,
     values
+  );
+  res.json({ step: result.rows[0] });
+});
+
+const rectSchema = z.object({
+  xPct: z.number().min(0).max(100),
+  yPct: z.number().min(0).max(100),
+  wPct: z.number().min(0).max(100),
+  hPct: z.number().min(0).max(100),
+});
+const redactSchema = z.object({ rects: z.array(rectSchema).min(1) });
+
+// Bakes opaque black boxes into the step's screenshot at the given rects
+// (percentages of image dimensions, so they're resolution-independent) and
+// overwrites the stored file in place -- this is destructive by design.
+stepsRouter.post("/:id/redact", async (req: AuthedRequest, res) => {
+  const stepResult = await pool.query("SELECT * FROM steps WHERE id = $1", [req.params.id]);
+  const step = stepResult.rows[0];
+  if (!step) return res.status(404).json({ error: "Step not found" });
+  const guide = await assertGuideAccess(req.userId!, step.guide_id);
+  if (!guide) return res.status(404).json({ error: "Step not found" });
+  if (!step.image_path) return res.status(400).json({ error: "Step has no image" });
+
+  const parsed = redactSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+
+  const filePath = path.join(uploadDir(), step.image_path);
+  const meta = await sharp(filePath).metadata();
+  const width = meta.width ?? 0;
+  const height = meta.height ?? 0;
+
+  const rectsSvg = parsed.data.rects
+    .map((r) => {
+      const x = (r.xPct / 100) * width;
+      const y = (r.yPct / 100) * height;
+      const w = (r.wPct / 100) * width;
+      const h = (r.hPct / 100) * height;
+      return `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="black" />`;
+    })
+    .join("");
+  const overlay = Buffer.from(`<svg width="${width}" height="${height}">${rectsSvg}</svg>`);
+
+  const tmpPath = `${filePath}.redact-tmp`;
+  await sharp(filePath).composite([{ input: overlay }]).toFile(tmpPath);
+  await rename(tmpPath, filePath);
+
+  const result = await pool.query(
+    "UPDATE steps SET redacted = true, redaction_rects = $1 WHERE id = $2 RETURNING *",
+    [JSON.stringify(parsed.data.rects), step.id]
   );
   res.json({ step: result.rows[0] });
 });
